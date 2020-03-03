@@ -37,6 +37,14 @@ namespace Informa.IntelligenceOne.Parser.Utilities
         {
             return v != null && v != string.Empty;
         }
+
+        public static int ConvertToInt(object v, int defaultValue)
+        {
+            if (v == null)
+                return defaultValue;
+
+            return ConvertToInt(v.ToString(), defaultValue);
+        }
         public static int ConvertToInt(string v, int defaultValue)
         {
             int vValue = defaultValue;

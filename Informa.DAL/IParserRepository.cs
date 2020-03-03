@@ -10,6 +10,6 @@ namespace Informa.IntelligenceOne.Parser.DAL
     {
         BankResults Create(NewBankResultInfomation bankResultInfo);
 
-        Task<List<BankConfig>> GetByBankId(int bankId);
+        Task<List<ZoneConfig>> GetByLenderAndSheetId(int lenderId, int sheetId);
     }
 }

@@ -44,20 +44,22 @@ namespace Informa.IntelligenceOne.Parser.Processor
 
         List<ZoneProcessorState> _zoneResults = new List<ZoneProcessorState>();
 
+        ZoneLocator _zoneLocator;
+
         int _counter;
         int _counterMax;
 
         int _configId;
 
         StringBuilder _builderSheetName;
-        StringBuilder _builderZoneName;
+        
         StringBuilder _builderZoneStart;
         StringBuilder _builderZoneIncludeStart;
         StringBuilder _builderZoneStop;
         StringBuilder _builderZoneIncludeStop;
         StringBuilder _builderZoneEnd;
         StringBuilder _builderZoneStartOverride;
-        StringBuilder _builderStrValue;
+        StringBuilder _builderColumnRowValue;
 
         StringBuilder _builderStrColumnValue;
 
@@ -68,9 +70,15 @@ namespace Informa.IntelligenceOne.Parser.Processor
         int _intStartColumn = -1;
         int _intStopRow = -1;
         int _intStopColumn = -1;
-        int _intEnd = -1;
-        int _intCounter = 0;
+        int _intEndColumn = -1;
+        int _intEndRow = -1;
+        int _intColumnCounter = 0;
         int _intRowCounter = 0;
+
+        int _intStartTextInstance = 0;
+        int _intEndTextInstance = 0;
+        int _intStopTextInstance = 0;
+
 
         int _intDataRowCounter = 0;
         int _intDataColCounter = 0;
@@ -102,7 +110,7 @@ namespace Informa.IntelligenceOne.Parser.Processor
                 return success;
 
             //clear builders
-            Utilities.StringFunctions.Replace(ref _builderZoneName, string.Empty);
+            
 
             Utilities.StringFunctions.Replace(ref _builderZoneStart, string.Empty);
             Utilities.StringFunctions.Replace(ref _builderZoneIncludeStart, string.Empty);
@@ -116,16 +124,10 @@ namespace Informa.IntelligenceOne.Parser.Processor
 
             if (_counter < _counterMax)
             {
-                _jsonZone = (JObject)_jsonZones[_counter];
-
-                Utilities.StringFunctions.Replace(ref _builderZoneName, _jsonZone["Name"]);
-
-                Utilities.StringFunctions.Replace(ref _builderZoneStart, _jsonZone["Start"], Const.Parser.UPPER_CASE_VALUE);
-                Utilities.StringFunctions.Replace(ref _builderZoneIncludeStart, _jsonZone["IncludeStart"]);
-                Utilities.StringFunctions.Replace(ref _builderZoneStop, _jsonZone["Stop"], Const.Parser.UPPER_CASE_VALUE);
-                Utilities.StringFunctions.Replace(ref _builderZoneIncludeStop, _jsonZone["IncludeStop"]);
-                Utilities.StringFunctions.Replace(ref _builderZoneEnd, _jsonZone["End"]);
-                Utilities.StringFunctions.Replace(ref _builderZoneStartOverride, _jsonZone["StartOverride"]);
+                if (_zoneLocator == null)
+                    _zoneLocator = new ZoneLocator((JObject)_jsonZones[_counter]);
+                else
+                    _zoneLocator.Reset((JObject)_jsonZones[_counter]);
 
                 success = true;
             }
@@ -136,103 +138,79 @@ namespace Informa.IntelligenceOne.Parser.Processor
 
         public void Process()
         {
-            FindData();
+            if (_zoneLocator.IsValid())
+            {
+                FindData();
 
-            GetData();
+                GetData();
 
-            PersistData();
+                PersistData();
+            }
         }
 
         private void FindData()
         {
+            bool allCordinatesFound = false;
             // Have config, so now loop through the entire Json doc and find the data
             foreach (JObject itemrow in _jsonSheet)
             {
                 _intRowCounter++;
 
+                if (allCordinatesFound)
+                    break;
+
                 // Loop through each column
-                _intCounter = 0;
+                _intColumnCounter = 0;
                 foreach (var column in itemrow)
                 {
                     // Increment the Counter - since we continue if null value
-                    _intCounter++;
+                    _intColumnCounter++;
 
-                    Utilities.StringFunctions.Replace(ref _builderStrValue, column.Value, Const.Parser.UPPER_CASE_VALUE);
-
-                    if (string.IsNullOrEmpty(_builderStrValue.ToString()))
-                    {
-                        // Move to the next, no values
-                        continue;
-                    }
+                    Utilities.StringFunctions.Replace(ref _builderColumnRowValue, column.Value, Const.Parser.UPPER_CASE_VALUE);
 
                     // Check to see if we have the Start of the Zone
                     // Only need to check if we haven't found the start
                     if (!_blnStart)
                     {
-                        if (_builderZoneStart.ToString() == "@START")
-                        {
-                            _blnStart = true;
-                            // Set the Start Row to 1
-                            _intStartRow = 1;
-                            // Check to see if we have an override
-                            if (_builderZoneStartOverride != null)
-                            {
-                                _intStartColumn = Utilities.StringFunctions.ConvertToInt(_builderZoneStartOverride.ToString(), 1);
-                            }
-                            else
-                            {
-                                // Set the Column to 1
-                                _intStartColumn = 1;
-                            }
-                        }
-                        else if (_builderStrValue.ToString().Trim() == _builderZoneStart.ToString().Trim())
-                        {
-                            // Found the start of the Zone, record the Row and Column
-                            _blnStart = true;
-                            _intStartRow = _intRowCounter;
-
-                            if (_builderZoneStartOverride != null)
-                            {
-                                _intStartColumn = Utilities.StringFunctions.ConvertToInt(_builderZoneStartOverride.ToString(), 1);
-                            }
-
-                            _intStartColumn = _intCounter;
-                        }
+                        _blnStart = _zoneLocator.StartTextFound(_builderColumnRowValue.ToString(),
+                            ref _intStartColumn, ref _intStartRow, ref _intStartTextInstance, _intColumnCounter,_intRowCounter);
                     }
 
-                    // Check to see if we have the Stop of a Zone
-                    if (_builderStrValue.ToString().Trim() == _builderZoneStop.ToString().Trim())
+                    // Check to see if we have the End of the Zone
+                    // Only need to check if we haven't found the end
+                    if (!_blnEnd)
                     {
-                        // Found the Stop of the Zone, record the Row and Column
-                        _blnStop = true;
-                        _intStopRow = _intRowCounter;
-                        // If a Start Column Override was entered, we 
-                        // need to ensure that the Stop Column is the same
-                        if (_builderZoneStartOverride != null)
-                        {
-                            _intStopColumn = Utilities.StringFunctions.ConvertToInt(_builderZoneStartOverride.ToString(), 1);
-                        }
-                        else
-                        {
-                            _intStopColumn = _intCounter;
-                        }
-                        // Can we just stop, we have found the Stop Text
-                        break;
+                        _blnEnd = _zoneLocator.EndTextFound(_builderColumnRowValue.ToString(),
+                            ref _intEndColumn, ref _intEndRow, ref _intEndTextInstance, _intColumnCounter, _intRowCounter);
+
                     }
 
-                    if (_builderStrValue.ToString().Trim() == _builderZoneEnd.ToString().Trim() && !_blnEnd)
+                    // Check to see if we have the Stop of the Zone
+                    // Only need to check if we haven't found the stopping point
+                    if (!_blnStop)
                     {
-                        // Found the End of the Zone, record the Column
-                        _blnEnd = true;
-                        _intEnd = _intCounter;
+                        _blnStop = _zoneLocator.StopTextFound(_builderColumnRowValue.ToString(),
+                                ref _intStopColumn, ref _intStopRow, ref _intStopTextInstance, _intColumnCounter, _intRowCounter);
                     }
 
-                    // If we hit the Stop, then we can break out of this loop
                     if (_blnStop)
-                    {
+                    {  
+                        // Can we just stop, we have found the Stop Text
+                        allCordinatesFound = true;
+
+                        if (!_blnStart)
+                        {
+                            //log an error
+                        }
+
+                        if (!_blnEnd)
+                        {
+                            //log an error
+                        }
 
                         break;
                     }
+
                 }
             }
 
@@ -284,19 +262,23 @@ namespace Informa.IntelligenceOne.Parser.Processor
                         continue;
                     }
                     // if we hit the end, we can stop
-                    if (_intDataColCounter >= _intEnd)
+                    if (_intDataColCounter >= _intEndColumn)
                     {
                         // First check to ensure an end was detected, if end = -1, then we 
                         // will continue until there are no more columns in the JSON
-                        if (_intEnd != -1)
+                        if (_intEndColumn != -1)
                         {
                             break;
                         }
                     }
                     // Add the Data to our JSON Object
                     Utilities.StringFunctions.Replace(ref _builderStrColumnValue,columnitem.Value);
+                    
+                    //dont like this implementation - mg
+                    if(_zoneLocator.ExcludeData(_builderStrColumnValue.ToString()))
+                        Utilities.StringFunctions.Replace(ref _builderStrColumnValue, string.Empty);
 
-                    jsonZoneRow.Add(columnitem.Key, columnitem.Value);
+                    jsonZoneRow.Add(columnitem.Key, _builderStrColumnValue.ToString());
                     if (_builderStrColumnValue != null)
                     {
                         if(_builderStrColumnValue.Length > 0)
@@ -315,7 +297,7 @@ namespace Informa.IntelligenceOne.Parser.Processor
             // Insert these results into the database?  This is only for one Zone
             // If there are multiple zones, then we cannot save here
             JObject jsonZone = new JObject();
-            jsonZone.Add("Zone", _builderZoneName.ToString());
+            jsonZone.Add("Zone", _zoneLocator.GetZoneName());
             jsonZone.Add("Sheet", _builderSheetName.ToString());
 
             // Add the Array to json, must use a property
@@ -328,10 +310,16 @@ namespace Informa.IntelligenceOne.Parser.Processor
         public void PersistData()
         {
             
-            _zoneResults.Add(new ZoneProcessorState(new JArray(_jsonFinalZoneArray), _builderSheetName.ToString(), _builderZoneName.ToString(),_configId));
+            _zoneResults.Add(new ZoneProcessorState(new JArray(_jsonFinalZoneArray), _builderSheetName.ToString(), _zoneLocator.GetZoneName(),_configId));
         }
         public List<ZoneProcessorState> ProcessedZones()
         {
+            if (_zoneResults == null)
+                return null;
+
+            if (_zoneResults.Count == 0)
+                return null;
+
             return _zoneResults;
         }
     }

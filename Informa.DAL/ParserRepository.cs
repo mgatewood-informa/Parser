@@ -17,10 +17,10 @@ namespace Informa.IntelligenceOne.Parser.DAL
             _context = context;
         }
 
-        public async Task<List<BankConfig>> GetByBankId(int bankId)
+        public async Task<List<ZoneConfig>> GetByLenderAndSheetId(int lenderId,int sheetId)
         {
-            return await _context.Set<BankConfig>()
-                .Where(bc => bc.BankId == bankId)
+            return await _context.Set<ZoneConfig>()
+                .Where(bc => bc.LenderId == lenderId && bc.SheetId == sheetId)
                 .ToListAsync();
         }
 

@@ -9,7 +9,7 @@ namespace Informa.IntelligenceOne.Parser.DAL.Core
 {
     public interface IParserService
     {
-        Task<IList<BankConfig>> GetBankConfig(int BankId);
+        Task<IList<ZoneConfig>> GetZoneConfig(int LenderId, int SheetId);
 
         void CreateBankResultEntry(List<NewBankResultInfomation> bankResults);
     }

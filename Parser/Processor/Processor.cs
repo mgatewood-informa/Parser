@@ -14,7 +14,10 @@ namespace Informa.IntelligenceOne.Parser.Processor
     class Base_Processor
     {
         static dynamic _jsonconfig;
-        int _intBankId;
+
+        int _intLenderId;
+        int _intCompanySheetId;
+
         int _intConfigId;
         string _fileName;
 
@@ -37,12 +40,12 @@ namespace Informa.IntelligenceOne.Parser.Processor
             IList<BankConfig> parserConfigsToProcess = await _parserService.GetBankConfig(_intBankId).GetAwaiter().GetResult();
             return parserConfigsToProcess;
         }*/
-        private IList<BankConfig> GetConfiguration()
+        private IList<ZoneConfig> GetConfiguration()
         {
 
             //lenderSheetZoneConfigs = GetConfiguration().GetAwaiter().GetResult();
 
-            IList<BankConfig> parserConfigsToProcess = _parserService.GetBankConfig(_intBankId).GetAwaiter().GetResult();
+            IList<ZoneConfig> parserConfigsToProcess = _parserService.GetZoneConfig(_intLenderId,_intCompanySheetId).GetAwaiter().GetResult();
             return parserConfigsToProcess;
         }
 
@@ -57,15 +60,15 @@ namespace Informa.IntelligenceOne.Parser.Processor
             //IList<ParserConfig> parserToProcess = GetConfiguration();
 
             //get the configuration in the database for the file
-            IList<BankConfig> lenderSheetZoneConfigs = GetConfiguration();
+            IList<ZoneConfig> lenderSheetZoneConfigs = GetConfiguration();
 
             //for each config to process
-            foreach (BankConfig lenderSheetZoneConfig in lenderSheetZoneConfigs)
+            foreach (ZoneConfig lenderSheetZoneConfig in lenderSheetZoneConfigs)
             {
                 _parserResultsToPersist = new List<ZoneProcessorState>();
 
                 //look at the json to see if 
-                _jsonconfig = JObject.Parse(lenderSheetZoneConfig.Configuration);
+                _jsonconfig = JObject.Parse(lenderSheetZoneConfig.Zones);
 
                 //get sheet name
                 Utilities.StringFunctions.Replace(ref _builderConfigSheetName,
@@ -76,6 +79,7 @@ namespace Informa.IntelligenceOne.Parser.Processor
 
                 if(extractedPage != null)
                 {
+                    //thread safe
                     ProcessZone(new ZoneProcessorState(
                         (JArray)_jsonconfig["Sheets"][0]["Zones"], 
                         extractedPage.Json, 
@@ -90,6 +94,9 @@ namespace Informa.IntelligenceOne.Parser.Processor
 
         private void AddZoneResults(List<ZoneProcessorState> aResult)
         {
+            if (aResult == null)
+                return;
+
             lock (_threadSyncLockHash.SyncRoot)
             {
                 _parserResultsToPersist.AddRange(aResult);
@@ -106,6 +113,8 @@ namespace Informa.IntelligenceOne.Parser.Processor
                 zoneProcessor.Process();
             }
 
+
+            //(all threads join background results) thread safe
             AddZoneResults(zoneProcessor.ProcessedZones());
         }
 
@@ -129,14 +138,16 @@ namespace Informa.IntelligenceOne.Parser.Processor
             if(bankResults.Count > 0)
                 _parserService.CreateBankResultEntry(bankResults);
         }
-        public Base_Processor(IParserService parserService, List<ProcessedPage> pages,int bankId,string fileName)
+        public Base_Processor(IParserService parserService, List<ProcessedPage> pages,int lenderId,int companySheetId, string fileName)
         {
             //, IParserRepository<BankConfig>
             _parserService = parserService;
 
             _pagesToProcess = pages;
 
-            _intBankId = bankId;
+            _intLenderId = lenderId;
+
+            _intCompanySheetId = companySheetId;
 
             _fileName = fileName;
         }

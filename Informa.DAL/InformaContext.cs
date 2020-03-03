@@ -16,9 +16,9 @@ namespace Informa.IntelligenceOne.Parser.DAL
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<BankConfig>(entity =>
+            modelBuilder.Entity<ZoneConfig>(entity =>
             {
-                entity.Property(e => e.Id).HasColumnName("ConfigId");
+                entity.Property(e => e.Id).HasColumnName("ZoneConfigId");
             });
 
             modelBuilder.Entity<BankResults>(entity =>
@@ -26,6 +26,6 @@ namespace Informa.IntelligenceOne.Parser.DAL
                 entity.Property(e => e.Id).HasColumnName("ResultsId");
             });
         }
-        public virtual DbSet<BankConfig> BankConfig { get; set; }
+        public virtual DbSet<ZoneConfig> ZoneConfig { get; set; }
     }
 }
