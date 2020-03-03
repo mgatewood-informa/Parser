@@ -28,6 +28,7 @@ namespace Informa.IntelligenceOne.Parser
 
             Informa.IntelligenceOne.Parser.DAL.Configure.ConfigureServices(_serviceCollection, ConfigurationManager.AppSettings["connectionString"]);
 
+            //_serviceCollection.AddTransient<IParserService, ParserService>();
             _serviceCollection.AddTransient<IParserService, ParserService>();
         }
         

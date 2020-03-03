@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>Informa.IntelligenceOne.Parser.Parser</RootNamespace>
     <AssemblyName>Informa.IntelligenceOne.Parser.Parser</AssemblyName>
   </PropertyGroup>
@@ -22,9 +22,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Informa.DAL\Informa.IntelligenceOne.Parser.DAL.csproj" />
-    <ProjectReference Include="..\Informa.DAL\Informa.IntelligenceOne.Parser.DAL.csproj" />
-    <ProjectReference Include="..\Informa.Models\Informa.IntelligenceOne.Parser.Models.csproj" />
+    <ProjectReference Include="..\..\Informa.IntelligenceOne.Common\Informa.IntelligenceOne.Logging\Informa.IntelligenceOne.Logging.csproj" />
+    <ProjectReference Include="..\Informa.IntelligenceOne.Parser.DAL\Informa.IntelligenceOne.Parser.DAL.csproj" />
+    <ProjectReference Include="..\Informa.IntelligenceOne.Parser.Models\Informa.IntelligenceOne.Parser.Models.csproj" />
   </ItemGroup>
 
 </Project>
